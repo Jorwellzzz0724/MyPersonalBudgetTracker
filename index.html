@@ -7,6 +7,7 @@
   var DEFAULT_URL = '';   // optional: paste your Web app URL (ends in /exec) here. Leave empty to be asked on first open.
   function cfg() { try { return JSON.parse(localStorage.getItem(LS) || 'null') || {}; } catch (e) { return {}; } }
   function save(c) { try { localStorage.setItem(LS, JSON.stringify(c)); } catch (e) {} }
+  try { if (/[?&]reset\b/.test(location.search)) localStorage.removeItem(LS); } catch (e) {}   // open the page with ?reset=1 to enter the URL and passcode again
   var pending = null;
 
   function ask(c) {
@@ -47,9 +48,9 @@
         method: 'POST', redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // text/plain avoids the browser pre-flight that Apps Script cannot answer
         body: JSON.stringify({ key: c.key, fn: fn, args: args })
-      });
+      }).catch(function () { throw new Error('Cannot reach Apps Script. Check your internet and the Web app URL (open the page with ?reset=1 to enter it again).'); });
     }).then(function (r) {
-      return r.json().catch(function () { throw new Error('Bad reply from Apps Script (check the deployment: Execute as Me, access Anyone, newest version)'); });
+      return r.json().catch(function () { save({}); throw new Error('Bad reply from Apps Script, so the saved URL was cleared. Reload and enter the /exec URL again (deployment: Execute as Me, access Anyone).'); });
     }).then(function (j) {
       if (j && j.ok) return j.data;
       var e = new Error((j && j.error) || 'Request failed');
